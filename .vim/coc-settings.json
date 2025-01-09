@@ -1,0 +1,25 @@
+{
+  "coc.preferences.formatOnSave": true,
+  "coc.preferences.formatOnType": true,
+  "clangd.fallbackFlags": ["-std=c++20", "-Wall"],
+  "clangd.arguments": [
+    "--background-index",
+    "--clang-tidy",
+    "--all-scopes-completion",
+    "--completion-parse=auto",
+    "--completion-style=detailed",
+    "--function-arg-placeholders=true",
+    "--header-insertion-decorators=false",
+    "--header-insertion=iwyu",
+    "-j=8"
+  ],
+  "clangd.compilationDatabaseCandidates": [
+    "${workspaceFolder}/build",
+    "${workspaceFolder}/cmake-build-debug",
+    "${workspaceFolder}/cmake-build-release",
+    "${workspaceFolder}/build/Debug",
+    "${workspaceFolder}/build/Release",
+    "${workspaceFolder}"
+  ],
+  "clangd.path": "clangd"
+}
