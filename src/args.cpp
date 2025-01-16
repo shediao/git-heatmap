@@ -8,7 +8,7 @@ Args::Args()
     : parser("git-heatmap", "Git Contribution Heatmap (Git 提交贡献热力图)") {
     parser.add_flag("h,help", "show help info", this->show_help_info);
     parser.add_option("repo", "git repository path", this->repo_path);
-    parser.add_option("email",
+    parser.add_option("e,email",
                       "author email(default: git config --get user.email)",
                       this->author_email);
     parser.add_option("b,branch", "branch name", this->branch)
