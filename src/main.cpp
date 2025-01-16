@@ -11,7 +11,7 @@
 #include "git_heatmap.h"
 #include "time_utils.h"
 
-#if defined(_WIN32)
+#if defined(__clang__) && defined(_WIN32)
 #include <windows.h>
 static void __attribute__((__constructor__)) git_heatmap_configure_console_mode(
     void) {
