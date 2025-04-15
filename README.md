@@ -32,7 +32,6 @@ Options:
      --repo <arg>                git repository path
  -e, --email <arg>               author email pattern(default: git config --get user.email)
  -b, --branch <arg>              branch name (default: HEAD)
- -w, --weeks <N>                 the number of display weeks
      --scheme <arg>              color scheme (default: default)
                                  (choices: default,dracula,vibrant)
      --glyph <arg>               heatmap glyph (default: square)

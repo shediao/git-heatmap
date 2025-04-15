@@ -102,8 +102,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(argparse)
 
 # 添加可执行文件
-add_executable(git-heatmap src/main.cpp src/args.cpp src/git_analyzer.cpp
-                           src/glob.cpp src/time_utils.cpp src/git_heatmap.cpp)
+add_executable(git-heatmap src/main.cpp src/args.cpp src/glob.cpp src/utils.cpp
+                           src/heatmap.cpp src/terminal.cpp)
 
 if(NOT USE_SYSTEM_LIBGIT2)
   add_dependencies(git-heatmap libgit2)

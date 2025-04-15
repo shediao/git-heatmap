@@ -4,16 +4,25 @@
 #include "argparse.hpp"
 #include "glob.h"
 
-Args::Args()
-    : parser("git-heatmap", "Git Contribution Heatmap (Git 提交贡献热力图)") {
+// TODO:
+// --days
+// --since
+// --until
+// --include-merges
+// --no-merges
+
+Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
     parser.add_flag("h,help", "show help info", this->show_help_info);
     parser.add_option("repo", "git repository path", this->repo_path);
-    parser.add_option("e,email",
-                      "author email(default: git config --get user.email)",
-                      this->author_email);
+    parser.add_option(
+        "a,author",
+        "author email pattern(default: git config --get user.email)",
+        this->author_email);
+    parser.add_option(
+        "e,email", "author email pattern(default: git config --get user.email)",
+        this->author_email);
     parser.add_option("b,branch", "branch name", this->branch)
         .default_value("HEAD");
-    parser.add_option("w,weeks", "the number of display weeks", this->weeks);
     parser.add_option("scheme", "color scheme", this->scheme)
         .default_value("default")
         .choices({"default", "dracula", "vibrant"});

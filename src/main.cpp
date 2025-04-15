@@ -1,15 +1,12 @@
-#include <chrono>
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
-#include <sstream>
-#include <string>
 
 #include "argparse.hpp"
 #include "args.h"
 #include "debug.h"
-#include "git_analyzer.h"
-#include "git_heatmap.h"
-#include "time_utils.h"
+#include "heatmap.h"
+#include "utils.h"
 
 #if defined(__clang__) && defined(_WIN32)
 #include <windows.h>
@@ -42,33 +39,13 @@ int main(int argc, const char* argv[]) {
             return 1;
         }
 
-#ifdef min
-#undef min
-#endif
-        size_t display_weeks =
-            std::min(HeatMap::max_display_weeks(), args.weeks);
-        DEBUG_LOG("display weeks: " << display_weeks);
-        DEBUG_LOG("now: " << std::format("{:%Y-%m-%d %H:%M:%S}", now()));
+        auto weeks = std::clamp(args.weeks, 4, MAX_DISPLAY_WEEKS);
+        auto end_days = sunday();
+        auto start_days = end_days - std::chrono::days(weeks * 7 - 1);
+        GitHeatMap heatmap(args.repo_path, args.branch, args.author_email,
+                           args.scheme, args.glyph, start_days, end_days);
 
-        DEBUG_LOG("Initializing GitAnalyzer");
-        GitAnalyzer analyzer(args.repo_path);
-
-        // 今天的时间， 精确到天
-        auto end_time = std::chrono::floor<std::chrono::days>(now());
-        auto start_time = end_time - std::chrono::days(display_weeks * 7);
-        DEBUG_LOG("Analyzing commits from "
-                  << std::format("{:%Y-%m-%d %H:%M:%S}", start_time) << " to "
-                  << std::format("{:%Y-%m-%d %H:%M:%S}", end_time));
-
-        auto analysis = analyzer.analyze_commits(args.author_email, args.branch,
-                                                 start_time, end_time);
-
-        DEBUG_LOG("Creating commit calendar");
-        HeatMap calendar(analysis.commit_counts, args.author_email, args.scheme,
-                         analysis.start_date, analysis.end_date);
-
-        DEBUG_LOG("Displaying calendar");
-        calendar.display();
+        heatmap.display();
 
     } catch (const std::exception& e) {
         DEBUG_LOG("Error occurred: " << e.what());

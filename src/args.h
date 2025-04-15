@@ -7,7 +7,7 @@
 #include <string>
 
 #include "argparse.hpp"
-#include "time_utils.h"
+#include "utils.h"
 
 std::chrono::hours timezon_offset();
 class Args;
@@ -37,7 +37,7 @@ class Args {
     std::string branch{"HEAD"};
     std::string scheme{"default"};
     std::string glyph{"square"};
-    size_t weeks{52};
+    int weeks{MAX_DISPLAY_WEEKS};
     bool show_help_info{false};
     bool debug{false};
     void parse(int argc, const char* argv[]);
