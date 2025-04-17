@@ -1,6 +1,7 @@
 #ifndef __GIT_HEATMAP_TERMINAL_H__
 #define __GIT_HEATMAP_TERMINAL_H__
 
+#include <array>
 #include <chrono>
 #include <map>
 #include <string>
