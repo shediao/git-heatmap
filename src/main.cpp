@@ -24,7 +24,7 @@ int main(int argc, const char* argv[]) {
         args.parse(argc, argv);
 
         DEBUG_LOG("Arguments parsed: repo_path="
-                  << args.repo_path << ", author_email=" << args.author_email
+                  << args.repo_path << ", email_pattern=" << args.email_pattern
                   << ", branch=" << args.branch);
 
         if (args.show_help_info) {
@@ -42,7 +42,7 @@ int main(int argc, const char* argv[]) {
         auto weeks = std::clamp(args.weeks, 4, MAX_DISPLAY_WEEKS);
         auto end_days = sunday();
         auto start_days = end_days - std::chrono::days(weeks * 7 - 1);
-        GitHeatMap heatmap(args.repo_path, args.branch, args.author_email,
+        GitHeatMap heatmap(args.repo_path, args.branch, args.email_pattern,
                            args.scheme, args.glyph, start_days, end_days);
 
         heatmap.display();

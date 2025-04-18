@@ -37,9 +37,9 @@ constexpr static int MAX_CHECK_COUNT = 100;
 
 class GitHeatMap::HeatMapImpl {
    public:
-    HeatMapImpl(std::string repo_path, std::string branch, std::string email,
-                std::string const& color_scheme, std::string const& glyph,
-                std::chrono::sys_days start_days,
+    HeatMapImpl(std::string repo_path, std::string branch,
+                std::string email_pattern, std::string const& color_scheme,
+                std::string const& glyph, std::chrono::sys_days start_days,
                 std::chrono::sys_days end_days);
     ~HeatMapImpl() {
         if (repo) {
@@ -97,7 +97,7 @@ git_oid GitHeatMap::HeatMapImpl::get_branch_head(
 }
 
 GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
-                                     std::string email,
+                                     std::string email_pattern,
                                      std::string const& color_scheme,
                                      std::string const& glyph,
                                      std::chrono::sys_days start_days,
@@ -134,7 +134,7 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
 
     assert((commits.size() % 7) == 0);
 
-    if (email.empty()) {
+    if (email_pattern.empty()) {
         GitResourceGuard<git_config, decltype(&git_config_free)> config_guard{
             nullptr, &git_config_free};
         if (git_repository_config_snapshot(&config_guard, repo) == 0) {
@@ -142,12 +142,12 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
             if (0 == git_config_get_string(&user_email, config_guard.get(),
                                            "user.email") &&
                 nullptr != user_email) {
-                email = user_email;
+                email_pattern = user_email;
             }
         }
     }
 
-    DEBUG_LOG("author: " << email);
+    DEBUG_LOG("author: " << email_pattern);
 
     git_oid branch_head = get_branch_head(branch);
 
@@ -188,7 +188,7 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         sha1[GIT_OID_HEXSZ] = '\0';
 
         if (commit_days >= start_days && commit_days <= end_days &&
-            (email.empty() || matchglob(email, email))) {
+            (email_pattern.empty() || matchglob(email_pattern, email))) {
             commits[(commit_days - start_days).count()].second++;
         } else {
             DEBUG_LOG("Skipping commit at time: "
@@ -201,12 +201,13 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
 void GitHeatMap::HeatMapImpl::display() { terminal.display(commits); }
 
 GitHeatMap::GitHeatMap(std::string repo_path, std::string branch,
-                       std::string email, std::string const& color_scheme,
+                       std::string email_pattern,
+                       std::string const& color_scheme,
                        std::string const& glyph,
                        std::chrono::sys_days start_days,
                        std::chrono::sys_days end_days)
     : impl(std::make_unique<HeatMapImpl>(
-          std::move(repo_path), std::move(branch), std::move(email),
+          std::move(repo_path), std::move(branch), std::move(email_pattern),
           color_scheme, glyph, start_days, end_days)) {}
 
 GitHeatMap::~GitHeatMap() {}

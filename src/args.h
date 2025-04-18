@@ -33,7 +33,7 @@ class Args {
 
     argparse::ArgParser parser;
     std::string repo_path{std::filesystem::current_path().string()};
-    std::string author_email{};
+    std::string email_pattern{};
     std::string branch{"HEAD"};
     std::string scheme{"default"};
     std::string glyph{"square"};
