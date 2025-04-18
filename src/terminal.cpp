@@ -195,37 +195,38 @@ void Terminal::display(
     auto month_lable =
         color_scheme.info + make_month_lable(commits) + color_scheme.reset;
 
-    std::cout << "   " << month_lable << "\n";
+    std::ostringstream output;
+    output << "   " << month_lable << "\n";
 
     auto [full, empty] = glyph;
 
     for (int i = 0; i < 7; i++) {
-        std::cout << color_scheme.info << week_label[i] << color_scheme.reset;
+        output << color_scheme.info << week_label[i] << color_scheme.reset;
         for (int j = 0; j < (int)commits.size() / 7; j++) {
             auto c = commits.begin() + i + j * 7;
             if (c->second > 0) {
-                std::cout << " "
-                          << color_scheme.level_color(
-                                 get_commit_number_level(c->second))
-                          << full << color_scheme.reset;
+                output << " "
+                       << color_scheme.level_color(
+                              get_commit_number_level(c->second))
+                       << full << color_scheme.reset;
             } else {
-                std::cout << " "
-                          << color_scheme.level_color(
-                                 get_commit_number_level(c->second))
-                          << empty << color_scheme.reset;
+                output << " "
+                       << color_scheme.level_color(
+                              get_commit_number_level(c->second))
+                       << empty << color_scheme.reset;
             }
         }
-        std::cout << "\n";
+        output << "\n";
     }
 
     auto footer_lable = color_scheme.info +
                         make_footer_lable("me", commits, color_scheme, glyph) +
                         color_scheme.reset;
 
-    std::cout << "   " << footer_lable << "\n";
+    output << "   " << footer_lable << "\n";
+
     std::cout.flush();
-    // 1. print month lable
-    // 2. print weak leble && grid
-    // 3. print footer lable
+    std::cout << output.str();
+    std::cout.flush();
     return;
 }

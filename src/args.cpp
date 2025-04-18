@@ -41,13 +41,10 @@ Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
 void Args::parse(int argc, const char* argv[]) {
     parser.parse(argc, argv);
 
-    if (this->author_email.empty()) {
-        // this->author_email = get_git_config("user.email");
-    } else {
-        if (!is_valid_glob_pattern(this->author_email)) {
-            throw std::invalid_argument("Invalid email pattern: " +
-                                        this->author_email);
-        }
+    if (!this->author_email.empty() &&
+        !is_valid_glob_pattern(this->author_email)) {
+        throw std::invalid_argument("Invalid email pattern: " +
+                                    this->author_email);
     }
 }
 

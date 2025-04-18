@@ -163,6 +163,8 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         }
         GitResourceGuard<git_commit, decltype(&git_commit_free)> commit_guard(
             commit, &git_commit_free);
+
+        // TODO: get all parent commits
         commit = nullptr;
         git_commit_parent(&commit, commit_guard.get(), 0);
 
