@@ -230,3 +230,46 @@ void Terminal::display(
     std::cout.flush();
     return;
 }
+
+std::string Terminal::show_example(std::string const& color_scheme,
+                                   std::string const& glyph) {
+    ColorScheme const& scheme{color_scheme};
+    auto block = ColorScheme::blocks.at(glyph);
+    std::stringstream output;
+    auto [full, empty] = block;
+    output << scheme.level_color(CommitNumberLevel::LEVEL0) << empty
+           << scheme.reset << " 0 ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL1) << full
+           << scheme.reset << " 1~2 ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL2) << full
+           << scheme.reset << " 3~5 ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL3) << full
+           << scheme.reset << " 6~10 ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL4) << full
+           << scheme.reset << " >10";
+
+    return output.str();
+}
+
+std::string Terminal::show_example2(std::string const& color_scheme,
+                                    std::string const& glyph) {
+    ColorScheme const& scheme{color_scheme};
+    auto block = ColorScheme::blocks.at(glyph);
+    std::stringstream output;
+    auto [full, empty] = block;
+    output << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL0) << empty
+           << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL0) << empty
+           << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL1) << full
+           << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL2) << full
+           << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL3) << full
+           << scheme.reset << " ";
+    output << scheme.level_color(CommitNumberLevel::LEVEL4) << full
+           << scheme.reset;
+
+    return output.str();
+}

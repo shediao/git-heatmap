@@ -41,6 +41,11 @@ class Terminal {
     void display(
         std::vector<std::pair<const std::chrono::sys_days, int>> commits);
 
+    static std::string show_example(std::string const& color_scheme,
+                                    std::string const& glyph);
+    static std::string show_example2(std::string const& color_scheme,
+                                     std::string const& glyph);
+
    private:
     ColorScheme color_scheme;
     std::pair<const char*, const char*> glyph;
