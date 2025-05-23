@@ -1,7 +1,7 @@
 
 #include "args.h"
 
-#include "argparse.hpp"
+#include "argparse/argparse.hpp"
 #include "glob.h"
 #include "terminal.h"
 

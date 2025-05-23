@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include "argparse.hpp"
+#include "argparse/argparse.hpp"
 #include "utils.h"
 
 std::chrono::hours timezon_offset();

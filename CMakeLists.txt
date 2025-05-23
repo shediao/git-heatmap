@@ -98,7 +98,7 @@ include(FetchContent)
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/shediao/argparse.hpp.git
-  GIT_TAG main)
+  GIT_TAG v0.0.5)
 FetchContent_MakeAvailable(argparse)
 
 # 添加可执行文件

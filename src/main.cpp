@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "argparse.hpp"
+#include "argparse/argparse.hpp"
 #include "args.h"
 #include "debug.h"
 #include "heatmap.h"
