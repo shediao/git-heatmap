@@ -16,119 +16,95 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /EHsc /W4")
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qunused-arguments")
+  endif()
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments")
+  endif()
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Werror")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(CMAKE_EXE_LINKER_FLAGS
-      "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
-  set(CMAKE_SHARED_LINK_FLAGS
-      "${CMAKE_SHARED_LINK_FLAGS} -static-libgcc -static-libstdc++")
-  set(CMAKE_MODULE_LINK_FLAGS
-      "${CMAKE_MODULE_LINK_FLAGS} -static-libgcc -static-libstdc++")
-endif()
+set(CMAKE_OSX_DEPLOYMENT_TARGET
+    "13.3"
+    CACHE STRING "Deployment target")
 
-option(USE_SYSTEM_LIBGIT2 "use system libgit2" OFF)
-
-if(USE_SYSTEM_LIBGIT2)
-  find_package(libgit2 QUIET)
-  if(NOT libgit2_FOUND)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LIBGIT2 REQUIRED libgit2)
-    set(LIBGIT2_INCLUDE_DIRS ${LIBGIT2_INCLUDE_DIRS})
-    set(LIBGIT2_LIBRARY_DIRS ${LIBGIT2_LIBRARY_DIRS})
-    set(LIBGIT2_LIBRARIES ${LIBGIT2_LIBRARIES})
-  else()
-    set(LIBGIT2_INCLUDE_DIRS ${LIBGIT2_INCLUDE_DIR})
-    set(LIBGIT2_LIBRARY_DIRS "") # CMake 模式下通常不需要额外的库目录
-    set(LIBGIT2_LIBRARIES ${LIBGIT2_LIBRARIES})
-  endif()
-  message(STATUS "Using system libgit2")
-  message(STATUS "  Include dirs: ${LIBGIT2_INCLUDE_DIRS}")
-  message(STATUS "  Libraries: ${LIBGIT2_LIBRARIES}")
-else()
-  set(LIBGIT2_DIR ${CMAKE_CURRENT_BINARY_DIR}/libgit2)
-  set(LIBGIT2_CMAKE_ARGS
-      -DCMAKE_BUILD_TYPE=Release
-      -DBUILD_SHARED_LIBS=OFF
-      -DBUILD_CLI=OFF
-      -DBUILD_EXAMPLES=OFF
-      -DBUILD_FUZZERS=OFF
-      -DBUILD_SHARED_LIBS=OFF
-      -DBUILD_TESTS=OFF
-      -DUSE_AUTH_NEGOTIATE=OFF
-      -DUSE_AUTH_NTLM=OFF
-      -DUSE_BUNDLED_ZLIB=ON
-      -DUSE_HTTPS=OFF
-      -DUSE_ICONV=OFF
-      -DUSE_SSH=OFF
-      -DREGEX_BACKEND=builtin
-      -DCMAKE_INSTALL_PREFIX=${LIBGIT2_DIR})
-  if(DEFINED CMAKE_TOOLCHAIN_FILE)
-    list(APPEND LIBGIT2_CMAKE_ARGS --toolchain=${CMAKE_TOOLCHAIN_FILE})
-  endif()
-  if(DEFINED CMAKE_OSX_ARCHITECTURES)
-    string(REPLACE ";" "^_^" OSX_ARCHITECTURES_LISTSEP
-                   "${CMAKE_OSX_ARCHITECTURES}")
-    list(APPEND LIBGIT2_CMAKE_ARGS
-         -DCMAKE_OSX_ARCHITECTURES=${OSX_ARCHITECTURES_LISTSEP})
-  endif()
-
-  message(STATUS "${LIBGIT2_CMAKE_ARG_STR}")
-  include(ExternalProject)
-  ExternalProject_Add(
-    libgit2
-    GIT_REPOSITORY https://github.com/libgit2/libgit2.git
-    GIT_TAG v1.9.0
-    LIST_SEPARATOR "^_^"
-    CMAKE_ARGS ${LIBGIT2_CMAKE_ARGS}
-    BUILD_IN_SOURCE 0
-    INSTALL_DIR ${LIBGIT2_DIR})
-  include_directories(SYSTEM ${LIBGIT2_DIR}/include)
-  list(PREPEND CMAKE_PREFIX_PATH ${LIBGIT2_DIR}/lib/cmake)
-  set(ENV{PKG_CONFIG_PATH} "${LIBGIT2_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
-  set(LIBGIT2_INCLUDE_DIRS ${LIBGIT2_DIR}/include)
-  set(LIBGIT2_LIBRARY_DIRS ${LIBGIT2_DIR}/lib)
-  set(LIBGIT2_LIBRARIES git2)
-
-endif()
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 include(FetchContent)
+
+FetchContent_Declare(
+  libgit2
+  GIT_REPOSITORY "https://github.com/libgit2/libgit2.git"
+  GIT_TAG v1.9.1)
+
+set(BUILD_SHARED_LIBS
+    OFF
+    CACHE BOOL "" FORCE)
+set(BUILD_TESTS
+    OFF
+    CACHE BOOL "" FORCE)
+set(BUILD_CLI
+    OFF
+    CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES
+    OFF
+    CACHE BOOL "" FORCE)
+set(BUILD_FUZZERS
+    OFF
+    CACHE BOOL "" FORCE)
+set(USE_SSH
+    OFF
+    CACHE BOOL "" FORCE)
+set(USE_HTTPS
+    OFF
+    CACHE BOOL "" FORCE)
+set(USE_NTLMCLIENT
+    OFF
+    CACHE BOOL "" FORCE)
+set(REGEX_BACKEND
+    "builtin"
+    CACHE STRING "" FORCE)
+set(USE_BUNDLED_ZLIB
+    ON
+    CACHE BOOL "" FORCE)
+set(USE_ICONV
+    OFF
+    CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(libgit2)
+
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/shediao/argparse.hpp.git
-  GIT_TAG v0.0.5)
+  GIT_TAG v0.0.12)
 FetchContent_MakeAvailable(argparse)
 
-# 添加可执行文件
-add_executable(git-heatmap src/main.cpp src/args.cpp src/glob.cpp src/utils.cpp
-                           src/heatmap.cpp src/terminal.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/args.cpp src/glob.cpp
+                               src/utils.cpp src/heatmap.cpp src/terminal.cpp)
 
-if(NOT USE_SYSTEM_LIBGIT2)
-  add_dependencies(git-heatmap libgit2)
-endif()
+target_include_directories(${PROJECT_NAME}
+                           PRIVATE "${libgit2_SOURCE_DIR}/include")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
   # ASAN
   target_compile_options(
-    git-heatmap PRIVATE -O0 -fsanitize=address -fsanitize=undefined
-                        -fno-omit-frame-pointer)
-  target_link_options(git-heatmap PRIVATE -fsanitize=address
+    ${PROJECT_NAME} PRIVATE -O0 -fsanitize=address -fsanitize=undefined
+                            -fno-omit-frame-pointer)
+  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address
                       -fsanitize=undefined -fno-omit-frame-pointer)
 endif()
-# 包含目录
-target_include_directories(git-heatmap PRIVATE ${LIBGIT2_INCLUDE_DIRS})
 
-# 链接目录
-target_link_directories(git-heatmap PRIVATE ${LIBGIT2_LIBRARY_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE libgit2package argparse::argparse)
 
-# 链接库
-target_link_libraries(git-heatmap PRIVATE ${LIBGIT2_LIBRARIES}
-                                          argparse::argparse)
-
-if(MSVC AND NOT USE_SYSTEM_LIBGIT2)
-  target_link_libraries(git-heatmap PRIVATE ws2_32 secur32)
+if(MINGW)
+  target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc)
+  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endif()
 
-install(TARGETS git-heatmap RUNTIME DESTINATION bin)
+if(LINUX)
+  target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
+endif()
+
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)

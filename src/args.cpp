@@ -29,14 +29,14 @@ Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
         .default_value("HEAD");
     parser.add_option("scheme", "color scheme", this->scheme)
         .default_value("default")
-        .allowed([](auto const& scheme) {
+        .choices([](auto const& scheme) {
             std::vector<std::string> ret;
             for (auto& [key, value] : scheme) {
                 ret.push_back(key);
             }
             return ret;
         }(ColorScheme::default_schemes))
-        .allowed_help([](auto const& scheme) {
+        .choices_description([](auto const& scheme) {
             std::map<std::string, std::string> ret;
             for (auto& [key, value] : scheme) {
                 ret[key] = Terminal::show_example(key, "square");
@@ -50,14 +50,14 @@ Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
 #else
         .default_value("square")
 #endif
-        .allowed([](auto const& blocks) {
+        .choices([](auto const& blocks) {
             std::vector<std::string> ret;
             for (auto& [key, block] : blocks) {
                 ret.push_back(key);
             }
             return ret;
         }(ColorScheme::blocks))
-        .allowed_help(
+        .choices_description(
             [](std::map<std::string, std::pair<const char*, const char*>> const&
                    blocks) {
                 std::map<std::string, std::string> ret;
