@@ -85,23 +85,13 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
                                                  -Wshadow -Werror)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
-  # ASAN
-  target_compile_options(
-    ${PROJECT_NAME} PRIVATE -O0 -fsanitize=address -fsanitize=undefined
-                            -fno-omit-frame-pointer)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address
-                      -fsanitize=undefined -fno-omit-frame-pointer)
-endif()
-
 target_link_libraries(${PROJECT_NAME} PRIVATE libgit2package argparse::argparse)
 
 if(MINGW)
-  target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc)
   set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endif()
 
-if(LINUX)
+if(LINUX OR MINGW)
   target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
