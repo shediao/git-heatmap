@@ -175,8 +175,6 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         commits_.push_back({i, 0});
     }
 
-    DEBUG_LOG("commits number: " << commits_.size());
-
     assert((commits_.size() % 7) == 0);
 
     if (email_pattern.empty()) {
