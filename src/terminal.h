@@ -51,8 +51,8 @@ class Terminal {
 
    private:
     std::string author_;
-    ColorScheme color_scheme;
-    std::pair<const char*, const char*> glyph;
+    ColorScheme color_scheme_;
+    std::pair<const char*, const char*> glyph_;
 };
 
 #endif  // __GIT_HEATMAP_TERMINAL_H__

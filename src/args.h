@@ -16,11 +16,11 @@ class Args {
    public:
     Args();
     struct DateParser {
-        std::string date_str;
-        explicit DateParser(std::string date_str) : date_str(date_str) {}
+        std::string date_str_;
+        explicit DateParser(std::string date_str) : date_str_(date_str) {}
         explicit operator std::chrono::sys_days() const {
             std::tm tm = {};
-            std::istringstream ss(date_str);
+            std::istringstream ss(date_str_);
             ss >> std::get_time(&tm, "%Y-%m-%d");
             if (ss.fail()) {
                 throw std::runtime_error("Invalid date format. Use YYYY-MM-DD");
@@ -31,15 +31,15 @@ class Args {
         }
     };
 
-    argparse::ArgParser parser;
-    std::string repo_path{std::filesystem::current_path().string()};
-    std::string email_pattern{};
-    std::string branch{"HEAD"};
-    std::string scheme{"default"};
-    std::string glyph{"square"};
-    int weeks{MAX_DISPLAY_WEEKS};
-    bool show_help_info{false};
-    bool debug{false};
+    argparse::ArgParser parser_;
+    std::string repo_path_{std::filesystem::current_path().string()};
+    std::string email_pattern_{};
+    std::string branch_{"HEAD"};
+    std::string scheme_{"default"};
+    std::string glyph_{"square"};
+    int weeks_{MAX_DISPLAY_WEEKS};
+    bool show_help_info_{false};
+    bool debug_{false};
     void parse(int argc, const char* argv[]);
 };
 

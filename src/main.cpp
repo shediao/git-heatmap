@@ -24,26 +24,26 @@ int main(int argc, const char* argv[]) {
         args.parse(argc, argv);
 
         DEBUG_LOG("Arguments parsed: repo_path="
-                  << args.repo_path << ", email_pattern=" << args.email_pattern
-                  << ", branch=" << args.branch);
+                  << args.repo_path_ << ", email_pattern="
+                  << args.email_pattern_ << ", branch=" << args.branch_);
 
-        if (args.show_help_info) {
+        if (args.show_help_info_) {
             DEBUG_LOG("Showing help information");
-            args.parser.print_usage();
+            args.parser_.print_usage();
             return 0;
         }
 
-        if (!std::filesystem::exists(args.repo_path)) {
-            DEBUG_LOG("Repository path does not exist: " << args.repo_path);
+        if (!std::filesystem::exists(args.repo_path_)) {
+            DEBUG_LOG("Repository path does not exist: " << args.repo_path_);
             std::cerr << "Error: repo path does not exist" << std::endl;
             return 1;
         }
 
-        auto weeks = std::clamp(args.weeks, 4, MAX_DISPLAY_WEEKS);
+        auto weeks = std::clamp(args.weeks_, 4, MAX_DISPLAY_WEEKS);
         auto end_days = sunday();
         auto start_days = end_days - std::chrono::days(weeks * 7 - 1);
-        GitHeatMap heatmap(args.repo_path, args.branch, args.email_pattern,
-                           args.scheme, args.glyph, start_days, end_days);
+        GitHeatMap heatmap(args.repo_path_, args.branch_, args.email_pattern_,
+                           args.scheme_, args.glyph_, start_days, end_days);
 
         heatmap.display();
 

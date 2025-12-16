@@ -7,7 +7,7 @@
 
 #define DEBUG_LOG(msg)                                   \
     do {                                                 \
-        if (GetArgs().debug) {                           \
+        if (GetArgs().debug_) {                          \
             std::cerr << "[DEBUG] " << msg << std::endl; \
         }                                                \
     } while (0)

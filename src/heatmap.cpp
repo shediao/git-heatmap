@@ -84,9 +84,9 @@ class GitHeatMap::HeatMapImpl {
                 std::string const& glyph, std::chrono::sys_days start_days,
                 std::chrono::sys_days end_days);
     ~HeatMapImpl() {
-        if (repo) {
-            git_repository_free(repo);
-            repo = nullptr;
+        if (repo_) {
+            git_repository_free(repo_);
+            repo_ = nullptr;
         }
     }
     void display();
@@ -95,10 +95,10 @@ class GitHeatMap::HeatMapImpl {
     void get_branch_head(const std::string& branch_name, git_oid* oid);
 
    private:
-    git_repository* repo{nullptr};
-    std::chrono::sys_days start_days{std::chrono::days::zero()};
-    std::chrono::sys_days end_days{std::chrono::days::zero()};
-    std::vector<std::pair<const std::chrono::sys_days, int>> commits;
+    git_repository* repo_{nullptr};
+    std::chrono::sys_days start_days_{std::chrono::days::zero()};
+    std::chrono::sys_days end_days_{std::chrono::days::zero()};
+    std::vector<std::pair<const std::chrono::sys_days, int>> commits_;
     EmailMatcher email_matcher_;
     Terminal terminal_;
 };
@@ -121,18 +121,18 @@ void GitHeatMap::HeatMapImpl::get_branch_head(const std::string& branch_name,
                     "refs/remotes/origin/" + branch_name};
     }
     for (auto const& refname : refnames) {
-        git_reference_ptr ref = [](git_repository* repo, const char* refname) {
+        git_reference_ptr ref = [](git_repository* repo, const char* refname_) {
             git_reference* r;
-            if (0 == git_reference_lookup(&r, repo, refname)) {
+            if (0 == git_reference_lookup(&r, repo, refname_)) {
                 return git_reference_ptr(r);
             }
             return git_reference_ptr(nullptr);
-        }(repo, refname.c_str());
+        }(repo_, refname.c_str());
         if (ref) {
             if (git_reference_type(ref.get()) == GIT_REFERENCE_SYMBOLIC) {
-                auto target_reference = [](git_reference* ref) {
+                auto target_reference = [](git_reference* refname_) {
                     git_reference* target;
-                    if (0 == git_reference_resolve(&target, ref)) {
+                    if (0 == git_reference_resolve(&target, refname_)) {
                         return git_reference_ptr(target);
                     }
                     return git_reference_ptr(nullptr);
@@ -153,31 +153,31 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
                                      std::string const& glyph,
                                      std::chrono::sys_days start_days,
                                      std::chrono::sys_days end_days)
-    : start_days{start_days},
-      end_days{end_days},
+    : start_days_{start_days},
+      end_days_{end_days},
       email_matcher_{email_pattern},
       terminal_{color_scheme, glyph, email_pattern} {
     DEBUG_LOG("Initializing GitAnalyzer with repo path: " << repo_path);
     ensure_libgit_init();
 
-    if (git_repository_open_ext(&repo, repo_path.c_str(), 0, nullptr) != 0) {
+    if (git_repository_open_ext(&repo_, repo_path.c_str(), 0, nullptr) != 0) {
         throw std::runtime_error("Failed to open repository");
     }
 
     DEBUG_LOG("today: " << today());
     DEBUG_LOG("monday: " << monday());
     DEBUG_LOG("sunday: " << sunday());
-    DEBUG_LOG("start date: " << start_days);
-    DEBUG_LOG("end date: " << end_days);
+    DEBUG_LOG("start date: " << start_days_);
+    DEBUG_LOG("end date: " << end_days_);
     DEBUG_LOG("branch: " << branch);
 
-    for (auto i = start_days; i <= end_days; i = i + std::chrono::days(1)) {
-        commits.push_back({i, 0});
+    for (auto i = start_days_; i <= end_days_; i = i + std::chrono::days(1)) {
+        commits_.push_back({i, 0});
     }
 
-    DEBUG_LOG("commits number: " << commits.size());
+    DEBUG_LOG("commits number: " << commits_.size());
 
-    assert((commits.size() % 7) == 0);
+    assert((commits_.size() % 7) == 0);
 
     if (email_pattern.empty()) {
         git_config_ptr config = [](git_repository* repo) {
@@ -186,7 +186,7 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
                 return git_config_ptr(c);
             }
             return git_config_ptr(nullptr);
-        }(repo);
+        }(repo_);
         if (config) {
             const char* user_email = nullptr;
             if (0 == git_config_get_string(&user_email, config.get(),
@@ -214,15 +214,15 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
             return git_commit_ptr(c);
         }
         return git_commit_ptr(nullptr);
-    }(repo, &head_oid);
+    }(repo_, &head_oid);
 
     git_revwalk_ptr walk = [](git_repository* repo) {
-        git_revwalk* walk{nullptr};
-        if (0 == git_revwalk_new(&walk, repo)) {
-            return git_revwalk_ptr(walk);
+        git_revwalk* w{nullptr};
+        if (0 == git_revwalk_new(&w, repo)) {
+            return git_revwalk_ptr(w);
         }
         return git_revwalk_ptr(nullptr);
-    }(repo);
+    }(repo_);
 
     if (!walk) {
         throw std::runtime_error("Failed to create git walk");
@@ -235,13 +235,13 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
     int check_count = 0;
 
     while (0 == git_revwalk_next(&oid, walk.get())) {
-        git_commit_ptr commit = [](git_repository* repo, git_oid* oid) {
+        git_commit_ptr commit = [](git_repository* repo, git_oid* o) {
             git_commit* c;
-            if (0 == git_commit_lookup(&c, repo, oid)) {
+            if (0 == git_commit_lookup(&c, repo, o)) {
                 return git_commit_ptr(c);
             }
             return git_commit_ptr(nullptr);
-        }(repo, &oid);
+        }(repo_, &oid);
         if (!commit) {
             break;
         }
@@ -249,7 +249,7 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
             std::chrono::system_clock::from_time_t(
                 git_commit_time(commit.get())) +
             timezon_offset());
-        if (commit_days < start_days) {
+        if (commit_days < start_days_) {
             if (check_count++ > MAX_CHECK_COUNT) {
                 break;
             }
@@ -263,9 +263,9 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         git_oid_fmt(sha1, &oid);
         sha1[GIT_OID_HEXSZ] = '\0';
 
-        if (commit_days >= start_days && commit_days <= end_days &&
+        if (commit_days >= start_days_ && commit_days <= end_days_ &&
             email_matcher_(email)) {
-            commits[(commit_days - start_days).count()].second++;
+            commits_[(commit_days - start_days_).count()].second++;
         } else {
             DEBUG_LOG("Skipping commit at time: "
                       << std::format("{:%Y-%m-%d}",
@@ -274,7 +274,7 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         }
     }
 }
-void GitHeatMap::HeatMapImpl::display() { terminal_.display(commits); }
+void GitHeatMap::HeatMapImpl::display() { terminal_.display(commits_); }
 
 GitHeatMap::GitHeatMap(std::string repo_path, std::string branch,
                        std::string email_pattern,

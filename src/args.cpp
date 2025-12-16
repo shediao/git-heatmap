@@ -12,22 +12,22 @@
 // --include-merges
 // --no-merges
 
-Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
-    parser.add_flag("h,help", "show help info", this->show_help_info);
-    parser.add_option("repo", "git repository path", this->repo_path)
+Args::Args() : parser_("git-heatmap", "Git Contribution Heatmap") {
+    parser_.add_flag("h,help", "show help info", this->show_help_info_);
+    parser_.add_option("repo", "git repository path", this->repo_path_)
         .value_help("dir");
-    parser
+    parser_
         .add_option("a,author", "author email pattern(default: user's email)",
-                    this->email_pattern)
+                    this->email_pattern_)
         .value_help("pattern");
-    parser
+    parser_
         .add_option("e,email", "author email pattern(default: user's email)",
-                    this->email_pattern)
+                    this->email_pattern_)
         .value_help("pattern")
         .hidden();
-    parser.add_option("b,branch", "branch name", this->branch)
+    parser_.add_option("b,branch", "branch name", this->branch_)
         .default_value("HEAD");
-    parser.add_option("scheme", "color scheme", this->scheme)
+    parser_.add_option("scheme", "color scheme", this->scheme_)
         .default_value("default")
         .choices([](auto const& scheme) {
             std::vector<std::string> ret;
@@ -43,8 +43,8 @@ Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
             }
             return ret;
         }(ColorScheme::default_schemes));
-    parser
-        .add_option("glyph", "heatmap glyph", this->glyph)
+    parser_
+        .add_option("glyph", "heatmap glyph", this->glyph_)
 #ifdef _WIN32
         .default_value("fisheye")
 #else
@@ -67,16 +67,16 @@ Args::Args() : parser("git-heatmap", "Git Contribution Heatmap") {
                 return ret;
             }(ColorScheme::blocks));
 
-    parser.add_flag("d,debug", "enable debug mode", this->debug).hidden();
-    parser.add_positional("repository", "alias of --repo", repo_path);
+    parser_.add_flag("d,debug", "enable debug mode", this->debug_).hidden();
+    parser_.add_positional("repository", "alias of --repo", this->repo_path_);
 }
 void Args::parse(int argc, const char* argv[]) {
-    parser.parse(argc, argv);
+    parser_.parse(argc, argv);
 
-    if (!this->email_pattern.empty() &&
-        !is_valid_glob_pattern(this->email_pattern)) {
+    if (!this->email_pattern_.empty() &&
+        !is_valid_glob_pattern(this->email_pattern_)) {
         throw std::invalid_argument("Invalid email pattern: " +
-                                    this->email_pattern);
+                                    this->email_pattern_);
     }
 }
 

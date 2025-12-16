@@ -110,8 +110,8 @@ std::string ColorScheme::level_color(CommitNumberLevel level) const {
 Terminal::Terminal(std::string const& color_scheme, std::string const& glyph,
                    std::string const& author)
     : author_{author},
-      color_scheme(color_scheme),
-      glyph{ColorScheme::blocks.at(glyph)} {}
+      color_scheme_(color_scheme),
+      glyph_{ColorScheme::blocks.at(glyph)} {}
 
 int Terminal::columns() const {
 #ifdef _WIN32
@@ -131,7 +131,7 @@ int Terminal::columns() const {
 std::string Terminal::info_color() const { return ColorScheme::info; }
 std::string Terminal::reset_color() const { return ColorScheme::reset; }
 std::string Terminal::level_color(CommitNumberLevel level) const {
-    return color_scheme.level_color(level);
+    return color_scheme_.level_color(level);
 }
 
 void Terminal::set_author(std::string const& author) { author_ = author; }
@@ -198,36 +198,36 @@ void Terminal::display(
     assert((commits.size() / 7) == MAX_DISPLAY_WEEKS);
 
     auto month_lable =
-        color_scheme.info + make_month_lable(commits) + color_scheme.reset;
+        color_scheme_.info + make_month_lable(commits) + color_scheme_.reset;
 
     std::ostringstream output;
     output << "   " << month_lable << "\n";
 
-    auto [full, empty] = glyph;
+    auto [full, empty] = glyph_;
 
     for (int i = 0; i < 7; i++) {
-        output << color_scheme.info << week_label[i] << color_scheme.reset;
+        output << color_scheme_.info << week_label[i] << color_scheme_.reset;
         for (int j = 0; j < (int)commits.size() / 7; j++) {
             auto c = commits.begin() + i + j * 7;
             if (c->second > 0) {
                 output << " "
-                       << color_scheme.level_color(
+                       << color_scheme_.level_color(
                               get_commit_number_level(c->second))
-                       << full << color_scheme.reset;
+                       << full << color_scheme_.reset;
             } else {
                 output << " "
-                       << color_scheme.level_color(
+                       << color_scheme_.level_color(
                               get_commit_number_level(c->second))
-                       << empty << color_scheme.reset;
+                       << empty << color_scheme_.reset;
             }
         }
         output << "\n";
     }
 
     auto footer_lable =
-        color_scheme.info +
-        make_footer_lable(author_, commits, color_scheme, glyph) +
-        color_scheme.reset;
+        color_scheme_.info +
+        make_footer_lable(author_, commits, color_scheme_, glyph_) +
+        color_scheme_.reset;
 
     output << "   " << footer_lable << "\n";
 
