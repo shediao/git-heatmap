@@ -107,8 +107,11 @@ std::string ColorScheme::level_color(CommitNumberLevel level) const {
     return rgb_color(current_color[static_cast<int>(level)]);
 }
 
-Terminal::Terminal(std::string const& color_scheme, std::string const& glyph)
-    : color_scheme(color_scheme), glyph{ColorScheme::blocks.at(glyph)} {}
+Terminal::Terminal(std::string const& color_scheme, std::string const& glyph,
+                   std::string const& author)
+    : author_{author},
+      color_scheme(color_scheme),
+      glyph{ColorScheme::blocks.at(glyph)} {}
 
 int Terminal::columns() const {
 #ifdef _WIN32
@@ -130,6 +133,8 @@ std::string Terminal::reset_color() const { return ColorScheme::reset; }
 std::string Terminal::level_color(CommitNumberLevel level) const {
     return color_scheme.level_color(level);
 }
+
+void Terminal::set_author(std::string const& author) { author_ = author; }
 
 static std::string make_month_lable(
     std::vector<std::pair<const std::chrono::sys_days, int>> commits) {
@@ -219,9 +224,10 @@ void Terminal::display(
         output << "\n";
     }
 
-    auto footer_lable = color_scheme.info +
-                        make_footer_lable("me", commits, color_scheme, glyph) +
-                        color_scheme.reset;
+    auto footer_lable =
+        color_scheme.info +
+        make_footer_lable(author_, commits, color_scheme, glyph) +
+        color_scheme.reset;
 
     output << "   " << footer_lable << "\n";
 

@@ -32,11 +32,14 @@ class ColorScheme {
 
 class Terminal {
    public:
-    Terminal(std::string const& color_scheme, std::string const& glyph);
+    Terminal(std::string const& color_scheme, std::string const& glyph,
+             std::string const& author);
     int columns() const;
     std::string info_color() const;
     std::string reset_color() const;
     std::string level_color(CommitNumberLevel level) const;
+
+    void set_author(std::string const& author);
 
     void display(
         std::vector<std::pair<const std::chrono::sys_days, int>> commits);
@@ -47,6 +50,7 @@ class Terminal {
                                      std::string const& glyph);
 
    private:
+    std::string author_;
     ColorScheme color_scheme;
     std::pair<const char*, const char*> glyph;
 };

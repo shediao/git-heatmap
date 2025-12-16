@@ -2,6 +2,11 @@
 
 #include <cassert>
 #include <chrono>
+#include <memory>
+
+#include "git2/repository.h"
+#include "git2/types.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -16,26 +21,63 @@
 #include "terminal.h"
 #include "utils.h"
 
-template <typename T, typename Del>
-class GitResourceGuard {
-   public:
-    GitResourceGuard(T* ref, Del del) : ref(ref), del(del) {}
-    ~GitResourceGuard() {
-        if (ref) {
-            del(ref);
-        }
-    }
-    T** operator&() { return &ref; }
-    T* get() const { return ref; }
+using git_repository_ptr =
+    std::unique_ptr<git_repository, decltype([](git_repository* repo) {
+                        git_repository_free(repo);
+                    })>;
 
-   private:
-    T* ref;
-    Del del;
-};
+using git_config_ptr =
+    std::unique_ptr<git_config, decltype([](git_config* config) {
+                        git_config_free(config);
+                    })>;
+
+using git_reference_ptr =
+    std::unique_ptr<git_reference, decltype([](git_reference* ref) {
+                        git_reference_free(ref);
+                    })>;
+using git_revwalk_ptr =
+    std::unique_ptr<git_revwalk, decltype([](git_revwalk* walk) {
+                        git_revwalk_free(walk);
+                    })>;
+
+using git_commit_ptr =
+    std::unique_ptr<git_commit, decltype([](git_commit* commit) {
+                        git_commit_free(commit);
+                    })>;
+
+using git_buf_ptr =
+    std::unique_ptr<git_buf, decltype([](git_buf* buf) { git_buf_free(buf); })>;
 
 constexpr static int MAX_CHECK_COUNT = 100;
 
 class GitHeatMap::HeatMapImpl {
+    class EmailMatcher {
+       public:
+        EmailMatcher(std::string const& email) : email_(email) {
+            set_pattern(email);
+        }
+        bool operator()(std::string const& email) {
+            if (email_.empty()) {
+                return true;
+            }
+            if (is_pattern_) {
+                return matchglob(email_, email);
+            }
+            return email.find(email_) != std::string::npos;
+        }
+
+        void set_pattern(std::string const& email) {
+            email_ = email;
+            is_pattern_ = std::any_of(email.begin(), email.end(), [](char c) {
+                return c == '?' || c == '*';
+            });
+        }
+
+       private:
+        std::string email_;
+        bool is_pattern_{false};
+    };
+
    public:
     HeatMapImpl(std::string repo_path, std::string branch,
                 std::string email_pattern, std::string const& color_scheme,
@@ -50,14 +92,15 @@ class GitHeatMap::HeatMapImpl {
     void display();
 
    private:
-    git_oid get_branch_head(const std::string& branch_name);
+    void get_branch_head(const std::string& branch_name, git_oid* oid);
 
    private:
     git_repository* repo{nullptr};
     std::chrono::sys_days start_days{std::chrono::days::zero()};
     std::chrono::sys_days end_days{std::chrono::days::zero()};
     std::vector<std::pair<const std::chrono::sys_days, int>> commits;
-    Terminal terminal;
+    EmailMatcher email_matcher_;
+    Terminal terminal_;
 };
 
 static void ensure_libgit_init() {
@@ -67,10 +110,8 @@ static void ensure_libgit_init() {
         initialized = true;
     }
 }
-git_oid GitHeatMap::HeatMapImpl::get_branch_head(
-    const std::string& branch_name) {
-    GitResourceGuard<git_reference, decltype(&git_reference_free)> ref(
-        nullptr, &git_reference_free);
+void GitHeatMap::HeatMapImpl::get_branch_head(const std::string& branch_name,
+                                              git_oid* oid) {
     std::vector<std::string> refnames{};
     if (branch_name.starts_with("refs/")) {
         refnames.push_back(branch_name);
@@ -80,17 +121,27 @@ git_oid GitHeatMap::HeatMapImpl::get_branch_head(
                     "refs/remotes/origin/" + branch_name};
     }
     for (auto const& refname : refnames) {
-        if (0 == git_reference_lookup(&ref, repo, refname.c_str())) {
-            git_oid oid;
-            if (git_reference_type(ref.get()) == GIT_REFERENCE_SYMBOLIC) {
-                GitResourceGuard<git_reference, decltype(&git_reference_free)>
-                    target_reference(nullptr, &git_reference_free);
-                git_reference_resolve(&target_reference, ref.get());
-                git_oid_cpy(&oid, git_reference_target(target_reference.get()));
-            } else {
-                git_oid_cpy(&oid, git_reference_target(ref.get()));
+        git_reference_ptr ref = [](git_repository* repo, const char* refname) {
+            git_reference* r;
+            if (0 == git_reference_lookup(&r, repo, refname)) {
+                return git_reference_ptr(r);
             }
-            return oid;
+            return git_reference_ptr(nullptr);
+        }(repo, refname.c_str());
+        if (ref) {
+            if (git_reference_type(ref.get()) == GIT_REFERENCE_SYMBOLIC) {
+                auto target_reference = [](git_reference* ref) {
+                    git_reference* target;
+                    if (0 == git_reference_resolve(&target, ref)) {
+                        return git_reference_ptr(target);
+                    }
+                    return git_reference_ptr(nullptr);
+                }(ref.get());
+                git_oid_cpy(oid, git_reference_target(target_reference.get()));
+            } else {
+                git_oid_cpy(oid, git_reference_target(ref.get()));
+            }
+            return;
         }
     }
     throw std::runtime_error("Branch not found: " + branch_name);
@@ -104,18 +155,12 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
                                      std::chrono::sys_days end_days)
     : start_days{start_days},
       end_days{end_days},
-      terminal{color_scheme, glyph} {
+      email_matcher_{email_pattern},
+      terminal_{color_scheme, glyph, email_pattern} {
     DEBUG_LOG("Initializing GitAnalyzer with repo path: " << repo_path);
     ensure_libgit_init();
 
-    git_buf buf = GIT_BUF_INIT;
-    GitResourceGuard<git_buf, decltype(&git_buf_free)> buf_guard(&buf,
-                                                                 &git_buf_free);
-    if (git_repository_discover(buf_guard.get(), repo_path.c_str(), 0,
-                                nullptr) != 0) {
-        throw std::runtime_error("Failed to discover repository");
-    }
-    if (git_repository_open(&repo, buf_guard.get()->ptr) != 0) {
+    if (git_repository_open_ext(&repo, repo_path.c_str(), 0, nullptr) != 0) {
         throw std::runtime_error("Failed to open repository");
     }
 
@@ -135,42 +180,74 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
     assert((commits.size() % 7) == 0);
 
     if (email_pattern.empty()) {
-        GitResourceGuard<git_config, decltype(&git_config_free)> config_guard{
-            nullptr, &git_config_free};
-        if (git_repository_config_snapshot(&config_guard, repo) == 0) {
+        git_config_ptr config = [](git_repository* repo) {
+            git_config* c{nullptr};
+            if (0 == git_repository_config_snapshot(&c, repo)) {
+                return git_config_ptr(c);
+            }
+            return git_config_ptr(nullptr);
+        }(repo);
+        if (config) {
             const char* user_email = nullptr;
-            if (0 == git_config_get_string(&user_email, config_guard.get(),
+            if (0 == git_config_get_string(&user_email, config.get(),
                                            "user.email") &&
                 nullptr != user_email) {
                 email_pattern = user_email;
+            } else {
+                DEBUG_LOG(git_error_last()->message);
             }
+        } else {
+            DEBUG_LOG("git config get error.");
         }
     }
-
+    if (!email_pattern.empty()) {
+        email_matcher_.set_pattern(email_pattern);
+        terminal_.set_author(email_pattern);
+    }
     DEBUG_LOG("author: " << email_pattern);
 
-    git_oid branch_head = get_branch_head(branch);
+    git_oid head_oid;
+    get_branch_head(branch, &head_oid);
+    git_commit_ptr head_commit = [](git_repository* repo, git_oid* oid) {
+        git_commit* c;
+        if (0 == git_commit_lookup(&c, repo, oid)) {
+            return git_commit_ptr(c);
+        }
+        return git_commit_ptr(nullptr);
+    }(repo, &head_oid);
 
-    git_commit* branch_head_commit;
-    git_commit_lookup(&branch_head_commit, repo, &branch_head);
+    git_revwalk_ptr walk = [](git_repository* repo) {
+        git_revwalk* walk{nullptr};
+        if (0 == git_revwalk_new(&walk, repo)) {
+            return git_revwalk_ptr(walk);
+        }
+        return git_revwalk_ptr(nullptr);
+    }(repo);
 
-    git_commit* commit = branch_head_commit;
+    if (!walk) {
+        throw std::runtime_error("Failed to create git walk");
+    }
 
+    git_revwalk_push(walk.get(), git_commit_id(head_commit.get()));
+    git_revwalk_sorting(walk.get(), GIT_SORT_TOPOLOGICAL | GIT_SORT_TIME);
+
+    git_oid oid;
     int check_count = 0;
-    do {
+
+    while (0 == git_revwalk_next(&oid, walk.get())) {
+        git_commit_ptr commit = [](git_repository* repo, git_oid* oid) {
+            git_commit* c;
+            if (0 == git_commit_lookup(&c, repo, oid)) {
+                return git_commit_ptr(c);
+            }
+            return git_commit_ptr(nullptr);
+        }(repo, &oid);
         if (!commit) {
             break;
         }
-        GitResourceGuard<git_commit, decltype(&git_commit_free)> commit_guard(
-            commit, &git_commit_free);
-
-        // TODO: get all parent commits
-        commit = nullptr;
-        git_commit_parent(&commit, commit_guard.get(), 0);
-
         auto commit_days = std::chrono::floor<std::chrono::days>(
             std::chrono::system_clock::from_time_t(
-                git_commit_time(commit_guard.get())) +
+                git_commit_time(commit.get())) +
             timezon_offset());
         if (commit_days < start_days) {
             if (check_count++ > MAX_CHECK_COUNT) {
@@ -179,16 +256,15 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
         } else {
             check_count = 0;
         }
-        auto const* author = git_commit_author(commit_guard.get());
+        auto const* author = git_commit_author(commit.get());
         auto email = std::string(author->email);
 
         char sha1[GIT_OID_HEXSZ + 1] = {0};
-        const git_oid* oid = git_commit_id(commit_guard.get());
-        git_oid_fmt(sha1, oid);
+        git_oid_fmt(sha1, &oid);
         sha1[GIT_OID_HEXSZ] = '\0';
 
         if (commit_days >= start_days && commit_days <= end_days &&
-            (email_pattern.empty() || matchglob(email_pattern, email))) {
+            email_matcher_(email)) {
             commits[(commit_days - start_days).count()].second++;
         } else {
             DEBUG_LOG("Skipping commit at time: "
@@ -196,9 +272,9 @@ GitHeatMap::HeatMapImpl::HeatMapImpl(std::string repo_path, std::string branch,
                                      std::chrono::year_month_day{commit_days})
                       << " by " << email << " sha1: " << sha1);
         }
-    } while (commit != nullptr);
+    }
 }
-void GitHeatMap::HeatMapImpl::display() { terminal.display(commits); }
+void GitHeatMap::HeatMapImpl::display() { terminal_.display(commits); }
 
 GitHeatMap::GitHeatMap(std::string repo_path, std::string branch,
                        std::string email_pattern,
