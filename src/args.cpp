@@ -15,15 +15,15 @@
 Args::Args() : parser_("git-heatmap", "Git Contribution Heatmap") {
     parser_.add_flag("h,help", "show help info", this->show_help_info_);
     parser_.add_option("repo", "git repository path", this->repo_path_)
-        .value_help("dir");
+        .value_placeholder("dir");
     parser_
         .add_option("a,author", "author email pattern(default: user's email)",
                     this->email_pattern_)
-        .value_help("pattern");
+        .value_placeholder("pattern");
     parser_
         .add_option("e,email", "author email pattern(default: user's email)",
                     this->email_pattern_)
-        .value_help("pattern")
+        .value_placeholder("pattern")
         .hidden();
     parser_.add_option("b,branch", "branch name", this->branch_)
         .default_value("HEAD");

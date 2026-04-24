@@ -70,7 +70,7 @@ FetchContent_MakeAvailable(libgit2)
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/shediao/argparse.hpp.git
-  GIT_TAG v0.0.13)
+  GIT_TAG v0.0.14)
 FetchContent_MakeAvailable(argparse)
 
 add_executable(${PROJECT_NAME} src/main.cpp src/args.cpp src/glob.cpp
